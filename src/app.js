@@ -238,6 +238,8 @@ function resetEntryForm() {
   $('receipt-preview').hidden = true;
   $('receipt-preview').removeAttribute('src');
   $('entry-delete').hidden = true;
+  $('entry-delete').dataset.armed = '';
+  $('entry-delete').textContent = 'Delete';
   $('entry-save').disabled = false;
   pendingReceiptId = null;
   editing = null;
@@ -245,6 +247,15 @@ function resetEntryForm() {
 
 function setCategory(value) {
   entryForm.querySelectorAll('input[name=category]').forEach((r) => { r.checked = r.value === value; });
+}
+
+async function showReceipt(receiptId) {
+  try {
+    const res = await fetch(`/api/receipts/${receiptId}`, { credentials: 'same-origin' });
+    if (!res.ok) return;
+    $('receipt-preview').src = URL.createObjectURL(await res.blob());
+    $('receipt-preview').hidden = false;
+  } catch { /* photo is optional */ }
 }
 
 function openEntry(e) {
@@ -256,10 +267,7 @@ function openEntry(e) {
   entryForm.date.value = e.date;
   entryForm.note.value = e.note || '';
   setCategory(e.category);
-  if (e.receiptId) {
-    $('receipt-preview').src = `/api/receipts/${e.receiptId}`;
-    $('receipt-preview').hidden = false;
-  }
+  if (e.receiptId) showReceipt(e.receiptId);
   $('entry-delete').hidden = false;
   $('entry-dialog').showModal();
 }
@@ -292,8 +300,15 @@ entryForm.addEventListener('submit', (ev) => {
   });
 });
 
+// Two taps to delete, in the page itself (no browser pop-up).
 $('entry-delete').addEventListener('click', async () => {
-  if (!editing || !confirm(`Delete ${editing.merchant} ${nzd.format(editing.amount)}?`)) return;
+  const btn = $('entry-delete');
+  if (!editing) return;
+  if (btn.dataset.armed !== '1') {
+    btn.dataset.armed = '1';
+    btn.textContent = `Tap again to delete ${nzd.format(editing.amount)}`;
+    return;
+  }
   try {
     await api(`/api/entries/${encodeURIComponent(editing.id)}`, { method: 'DELETE' });
     $('entry-dialog').close();

@@ -10,10 +10,11 @@
   --bad: #b3261e;
   --track: #ebe7dd;
   --chip: #f1eee6;
+  --backdrop: #dcd8cd;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #111412;
     --surface: #1a1e1b;
     --text: #eceee9;
@@ -25,8 +26,24 @@
     --bad: #ff8a80;
     --track: #2a2f2b;
     --chip: #232824;
+    --backdrop: #0a0c0b;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+    --bg: #111412;
+    --surface: #1a1e1b;
+    --text: #eceee9;
+    --muted: #9aa19c;
+    --line: #2b302c;
+    --brand: #7fd1a8;
+    --good: #6fcf97;
+    --warn: #f2b84b;
+    --bad: #ff8a80;
+    --track: #2a2f2b;
+    --chip: #232824;
+    --backdrop: #0a0c0b;
+    color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -39,7 +56,27 @@ body {
   font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-variant-numeric: tabular-nums;
 }
-#app { max-width: 640px; margin: 0 auto; padding: 12px 16px calc(32px + env(safe-area-inset-bottom)); }
+/* Phone-only layout: a single phone-width column everywhere. */
+#app {
+  max-width: 440px; margin: 0 auto;
+  padding-block: 12px calc(32px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.desktop-hint { display: none; }
+/* On a computer, show the app as a phone-sized screen with a nudge to use the phone. */
+@media (min-width: 640px) and (pointer: fine) {
+  body { background: var(--backdrop); }
+  .desktop-hint { display: block; text-align: center; color: var(--muted); font-size: 0.85rem; margin: 20px auto 12px; max-width: 420px; }
+  #app, #auth {
+    width: 400px; max-width: 400px; margin: 0 auto 32px; min-height: 780px;
+    background: var(--bg); border: 10px solid var(--text); border-radius: 44px;
+    box-shadow: 0 20px 60px rgb(0 0 0 / 0.25); overflow: hidden;
+  }
+  #app { padding-top: 22px; }
+  #auth { min-height: 780px; padding: 16px; }
+  dialog { width: 380px; }
+}
 h1, h2, h3 { margin: 0 0 8px; line-height: 1.2; }
 h2 { font-size: 1.05rem; }
 .muted { color: var(--muted); }
