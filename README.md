@@ -1,60 +1,56 @@
 # Monthly Budget
 
-A private web app that shows how much is left of the household's monthly groceries and miscellaneous budget, fed automatically from your bank and Amex.
+A private, shared app for two people that tracks the household's monthly groceries and miscellaneous budget. Snap a photo of a receipt and the details fill themselves in, or type an entry by hand. It shows what's left, what you can spend per day for the rest of the month, and whether you're on pace.
 
-It answers the question you'll actually ask at the supermarket: **how much have we got left, and are we on pace?**
+Hosted on Netlify, with no other services to sign up for except an Anthropic API key for reading receipts.
 
-## How it connects to the bank
+## How it works
 
-NZ banks don't hand out API access to individuals, so the app reads your accounts through [Akahu](https://www.akahu.nz), New Zealand's open banking provider. You connect your bank and Amex to Akahu once, and the app reads transactions with a read-only personal token. Akahu personal apps are free for your own accounts.
+| Piece | What it does | Cost |
+|---|---|---|
+| Netlify site | Hosts the app and a single API function (`netlify/functions/api.mts`) | Within your existing Netlify plan |
+| Netlify Identity | Email + password login, invite-only signup, password reset emails | Included |
+| Netlify Blobs | Stores entries, settings and receipt photos | Included |
+| Claude (Anthropic API) | Reads the receipt photo: store, date, total, groceries or misc | About 1 to 2 NZ cents per receipt |
 
-1. Sign up at [my.akahu.nz](https://my.akahu.nz) and connect your bank(s) and American Express. Check Amex appears in Akahu's list of connections before committing to this approach.
-2. Go to **Developers** and create a **personal app**. Copy the **App ID token** and the **User access token**.
-3. Put them in the environment as `AKAHU_APP_TOKEN` and `AKAHU_USER_TOKEN` (see `.env.example`).
+Every receipt read is shown to you to check before it saves. If Claude can't read a receipt, the photo is still kept and you type the details in. Manual entry works with no API key at all.
 
-If you're sharing the budget with a partner who has their own accounts, both people connect to the same Akahu login.
+## Setting it up (about 15 minutes)
 
-Data is as fresh as Akahu's feed. Bank transactions usually land within hours; card and pending transactions can lag by up to a day. The refresh button asks Akahu to pull new data, and pending transactions are included so recent card spend isn't missed.
+1. **Create the site.** In Netlify, choose *Add new project → Import an existing project*, pick this GitHub repository and the branch you want to deploy. The build settings come from `netlify.toml`.
+2. **Enable Identity.** Go to *Project configuration → Identity → Enable Identity*. Then:
+   - *Registration → Registration preferences*: set to **Invite only**. Nobody can sign up uninvited.
+   - Leave external providers (Google etc.) off.
+3. **Set environment variables** under *Project configuration → Environment variables*, scoped to Functions:
+   - `ANTHROPIC_API_KEY`: from [console.anthropic.com](https://console.anthropic.com). Put a monthly spend limit on it there; NZ$5 is generous for a household.
+   - `ALLOWED_EMAILS`: the two email addresses, comma separated. This is a second lock behind invite-only.
+4. **Redeploy** so the functions pick up the variables.
+5. **Invite both people.** *Identity → Invite users*, enter both email addresses. Each person gets an email, taps the link, chooses a password and is in.
+6. On each phone, open the site and use **Share → Add to Home Screen**, so it behaves like an app.
 
-## What counts toward the budget
+**Forgotten password:** tap *Forgot password?* on the sign-in screen, and a reset link is emailed. Emails come from `no-reply@netlify.com`, so check spam the first time.
 
-The maths is simple. Deciding what belongs in a "groceries and miscellaneous, nothing recurring" budget is the hard part. The app applies these rules in order, and the first match wins:
+## Using it
 
-1. **Your call on that transaction**: tap it and choose count / don't count.
-2. **Your merchant rules**: "always count Bunnings", "never count the school".
-3. **Money in**: merchant refunds reduce spend. Salary and transfers in are ignored.
-4. **Card repayments**: paying the Amex from the bank is excluded, otherwise every Amex purchase counts twice.
-5. **Non-discretionary types**: transfers, direct debits, standing orders, bill payments, loans.
-6. **Regular-bill categories**: housing, utilities, insurance (from Akahu's categorisation).
-7. **Subscriptions**: anything that charged a near-identical amount in 2 of the last 3 months (Netflix, the gym). Variable spend like the supermarket is never caught by this.
-8. **Everything else counts.**
+- **Snap a receipt** opens the camera. The app shrinks the photo, Claude reads it, and you check the amount and tap Save.
+- **Add manually** for anything without a receipt. Use a minus amount for a refund.
+- Tap any entry to edit or delete it. Deleting an entry also deletes its receipt photo.
+- The arrows at the top step back through previous months.
+- **Settings** changes the budget amount and the day the month starts (set it to payday if that's how you think about the month).
 
-Every transaction shows why it was or wasn't counted. Expect to make a handful of corrections in the first month, and very few after that, because merchant rules stick.
-
-By default the app tracks everyday accounts and credit cards, not savings. Change this, the budget amount, and the month start day (set it to payday if that's how you think about the month) in Settings.
-
-## Running it
-
-Requires Node 22 or later. There are no npm dependencies.
+## Development
 
 ```bash
-npm run add-user -- jp        # create a login (repeat for your partner)
-npm start                     # http://localhost:3000
-npm run demo                  # try it on sample data without a bank connection
-npm test
+npm install
+npm test          # budget logic and the full API against an in-memory store
+npm run build     # bundles src/app.js into public/app.js
 ```
 
-## Hosting
+Netlify Identity doesn't run locally under `netlify dev`, so test sign-in on a deploy preview.
 
-Any small host that runs Node or Docker with a persistent disk works. Fly.io, Railway or Render each cost a few dollars a month. A Dockerfile is included. Mount a volume at `/data`, set the Akahu tokens as secrets, set `PRODUCTION=1` and `TRUST_PROXY=1`, then create logins with `npm run add-user` on the server.
+## Security notes
 
-Add it to your phone's home screen and it behaves like an app.
-
-## Security
-
-- Bank access is **read-only**. The app can't move money.
-- Akahu tokens live only in server environment variables. They never reach the browser.
-- No transaction data is stored on disk. It's fetched from Akahu and held in memory for 10 minutes. The data file holds only logins (scrypt-hashed), sessions (stored hashed), and your settings.
-- Sessions use HttpOnly, SameSite=Strict, Secure cookies. Login is rate limited per IP and per username.
-- A strict Content Security Policy blocks inline scripts and framing, and bank-supplied text is never rendered as HTML.
-- Use a long password (12 characters minimum is enforced). If you want a second factor, put the app behind Cloudflare Access or Tailscale. That's a stronger and cheaper option than building 2FA into the app.
+- Signup is invite-only, and the API also checks every request against `ALLOWED_EMAILS`.
+- Receipt photos and entries are only served to signed-in, allowlisted users.
+- A strict Content Security Policy blocks third-party scripts and framing. Netlify Identity keeps the session in a cookie that page scripts can read, which is why no third-party code is allowed on the page.
+- The Anthropic key lives only in Netlify's server-side environment and never reaches the browser.

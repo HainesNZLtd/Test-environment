@@ -12,79 +12,113 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main id="login" class="login" hidden>
-    <form id="login-form" class="card login-card" autocomplete="on">
+  <!-- Signed-out screens: sign in, forgot password, set password (invite or reset) -->
+  <main id="auth" class="auth" hidden>
+    <div class="card auth-card">
       <h1>Monthly budget</h1>
-      <p class="muted">Groceries and everything else that isn't a regular bill.</p>
-      <label>Username <input name="username" autocomplete="username" required autocapitalize="none"></label>
-      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
-      <p id="login-error" class="error" role="alert"></p>
-      <button class="primary" type="submit">Sign in</button>
-    </form>
+
+      <form id="login-form" class="auth-view">
+        <p class="muted">Groceries and everything else that isn't a regular bill.</p>
+        <label>Email <input name="email" type="email" autocomplete="username" required autocapitalize="none"></label>
+        <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+        <p class="error" role="alert"></p>
+        <button class="primary" type="submit">Sign in</button>
+        <button class="link" type="button" data-view="forgot-form">Forgot password?</button>
+      </form>
+
+      <form id="forgot-form" class="auth-view" hidden>
+        <p class="muted">We'll email you a link to set a new password.</p>
+        <label>Email <input name="email" type="email" autocomplete="username" required autocapitalize="none"></label>
+        <p class="error" role="alert"></p>
+        <p class="ok" role="status"></p>
+        <button class="primary" type="submit">Send reset link</button>
+        <button class="link" type="button" data-view="login-form">Back to sign in</button>
+      </form>
+
+      <form id="password-form" class="auth-view" hidden>
+        <p class="muted" id="password-intro"></p>
+        <label>New password <input name="password" type="password" autocomplete="new-password" minlength="10" required></label>
+        <label>Same again <input name="confirm" type="password" autocomplete="new-password" minlength="10" required></label>
+        <p class="error" role="alert"></p>
+        <button class="primary" type="submit">Save password</button>
+      </form>
+    </div>
   </main>
 
   <div id="app" hidden>
     <header class="topbar">
-      <div>
+      <button class="icon" id="prev-month" aria-label="Previous month">&#8249;</button>
+      <div class="period">
         <div class="eyebrow" id="period-label"></div>
-        <div class="updated muted" id="updated"></div>
+        <div class="muted small" id="period-sub"></div>
       </div>
-      <div class="actions">
-        <button class="icon" id="refresh" title="Refresh from bank" aria-label="Refresh from bank">&#8635;</button>
-        <button class="icon" id="open-settings" title="Settings" aria-label="Settings">&#9881;</button>
-      </div>
+      <button class="icon" id="next-month" aria-label="Next month">&#8250;</button>
     </header>
 
-    <p id="demo-banner" class="banner" hidden>Demo mode: sample data. Connect Akahu to see your real accounts.</p>
-
     <section class="card hero" aria-live="polite">
-      <div class="hero-label">Available this month</div>
+      <div class="hero-label" id="hero-label">Available this month</div>
       <div class="hero-amount" id="available"></div>
       <div class="hero-sub" id="of-budget"></div>
       <div class="bar" role="img" id="bar-label">
         <div class="bar-fill" id="bar-fill"></div>
-        <div class="bar-marker" id="bar-marker" title="Where you'd be at an even pace"></div>
+        <div class="bar-marker" id="bar-marker" title="Where an even pace would put you"></div>
       </div>
       <div class="bar-legend"><span id="spent-label"></span><span id="pace-label"></span></div>
-      <div class="stats">
-        <div><div class="stat" id="daily"></div><div class="stat-label" id="daily-label">a day from here</div></div>
+      <div class="stats" id="stats">
+        <div><div class="stat" id="daily"></div><div class="stat-label" id="daily-label"></div></div>
         <div><div class="stat" id="projected"></div><div class="stat-label">projected month total</div></div>
       </div>
       <p class="status" id="status"></p>
-      <p class="muted small" id="pending-note" hidden></p>
+    </section>
+
+    <div class="add-row" id="add-row">
+      <label class="primary add-btn" for="receipt-input">&#128247; Snap a receipt</label>
+      <input id="receipt-input" type="file" accept="image/*" capture="environment" hidden>
+      <button class="secondary add-btn" id="add-manual">+ Add manually</button>
+    </div>
+
+    <section class="card split">
+      <div><h2>By type</h2><ul class="mini" id="by-category"></ul></div>
+      <div><h2>By person</h2><ul class="mini" id="by-person"></ul></div>
     </section>
 
     <section class="card">
-      <h2>Where it's going</h2>
-      <ol class="merchants" id="merchants"></ol>
-    </section>
-
-    <section class="card">
-      <div class="list-head">
-        <h2>Transactions</h2>
-        <div class="tabs" role="tablist">
-          <button role="tab" data-filter="counted" aria-selected="true">Counted</button>
-          <button role="tab" data-filter="excluded" aria-selected="false">Not counted</button>
-          <button role="tab" data-filter="all" aria-selected="false">All</button>
-        </div>
-      </div>
-      <p class="muted small">Tap a transaction to change whether it counts.</p>
+      <h2>Spending</h2>
       <ul class="tx-list" id="tx-list"></ul>
     </section>
 
     <footer class="footer">
       <span id="whoami" class="muted small"></span>
-      <button class="link" id="logout">Sign out</button>
+      <span>
+        <button class="link" id="open-settings">Settings</button>
+        <button class="link" id="logout">Sign out</button>
+      </span>
     </footer>
   </div>
 
-  <dialog id="tx-dialog">
-    <form method="dialog" class="sheet">
-      <h3 id="tx-title"></h3>
-      <p class="muted" id="tx-meta"></p>
-      <p id="tx-reason" class="reason"></p>
-      <div class="sheet-actions" id="tx-actions"></div>
-      <button value="cancel" class="link">Close</button>
+  <dialog id="entry-dialog">
+    <form id="entry-form" class="sheet">
+      <h3 id="entry-title">Add spending</h3>
+      <p class="reading" id="reading" hidden><span class="spinner"></span> Reading the receipt&hellip;</p>
+      <p class="muted small" id="read-note" hidden></p>
+      <img id="receipt-preview" class="receipt" alt="Receipt photo" hidden>
+      <label>Amount (NZ$)
+        <input name="amount" type="number" step="0.01" inputmode="decimal" required placeholder="0.00">
+        <span class="muted small">Use a minus sign for a refund.</span>
+      </label>
+      <label>Where <input name="merchant" maxlength="80" required placeholder="e.g. Woolworths"></label>
+      <div class="seg" role="radiogroup" aria-label="Type">
+        <label><input type="radio" name="category" value="Groceries" checked> Groceries</label>
+        <label><input type="radio" name="category" value="Misc"> Misc</label>
+      </div>
+      <label>Date <input name="date" type="date" required></label>
+      <label>Note <input name="note" maxlength="200" placeholder="Optional"></label>
+      <p class="error" role="alert"></p>
+      <div class="sheet-actions">
+        <button type="submit" class="primary" id="entry-save">Save</button>
+        <button type="button" class="danger" id="entry-delete" hidden>Delete</button>
+        <button type="button" class="link" id="entry-cancel">Cancel</button>
+      </div>
     </form>
   </dialog>
 
@@ -93,19 +127,11 @@
       <h3>Settings</h3>
       <label>Monthly budget (NZ$) <input name="budget" type="number" min="1" step="1" inputmode="numeric" required></label>
       <label>Month starts on day <input name="monthStartDay" type="number" min="1" max="28" step="1" inputmode="numeric" required>
-        <span class="muted small">Set to your payday if that's how you think about the month.</span></label>
-      <fieldset>
-        <legend>Accounts that count</legend>
-        <div id="account-list"></div>
-      </fieldset>
-      <fieldset>
-        <legend>Merchant rules</legend>
-        <div id="rule-list" class="muted small"></div>
-      </fieldset>
-      <p id="settings-error" class="error" role="alert"></p>
+        <span class="muted small">Set this to payday if that's how you think about the month.</span></label>
+      <p class="error" role="alert"></p>
       <div class="sheet-actions">
         <button type="submit" class="primary">Save</button>
-        <button type="button" class="link" id="close-settings">Cancel</button>
+        <button type="button" class="link" id="settings-cancel">Cancel</button>
       </div>
     </form>
   </dialog>

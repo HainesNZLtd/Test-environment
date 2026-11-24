@@ -2,13 +2,19 @@
   "name": "household-budget",
   "version": "1.0.0",
   "private": true,
-  "description": "Monthly groceries and miscellaneous budget tracker, fed by Akahu (NZ open banking).",
+  "description": "Shared monthly groceries and miscellaneous budget. Receipts read by Claude, hosted on Netlify.",
   "type": "module",
-  "engines": { "node": ">=22.0.0" },
   "scripts": {
-    "start": "node server.js",
-    "demo": "DEMO=1 node server.js",
-    "add-user": "node scripts/add-user.js",
-    "test": "node --test test/*.test.js"
+    "build": "esbuild src/app.js --bundle --format=esm --minify --target=es2022,safari16 --outfile=public/app.js",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.13.0",
+    "@netlify/blobs": "^11.1.10",
+    "@netlify/identity": "^2.0.1"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^6.1.1",
+    "esbuild": "^0.28.2"
   }
 }
