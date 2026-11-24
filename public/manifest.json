@@ -1,0 +1,9 @@
+{
+  "name": "Monthly Budget",
+  "short_name": "Budget",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f1ea",
+  "theme_color": "#0f3d2e",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
